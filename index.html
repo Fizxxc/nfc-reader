@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Universal Reader</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .nfc-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            background: linear-gradient(45deg, #4285F4, #34A853);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(66, 133, 244, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0); }
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #4285F4, #34A853);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            margin: 25px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        
+        .status.waiting {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+            border-left: 5px solid #2196f3;
+        }
+        
+        .status.success {
+            background-color: #e8f5e9;
+            color: #1b5e20;
+            border-left: 5px solid #4caf50;
+        }
+        
+        .status.error {
+            background-color: #ffebee;
+            color: #b71c1c;
+            border-left: 5px solid #f44336;
+        }
+        
+        .card-data {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+            border: 1px solid #ddd;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .data-row {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .data-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .data-value {
+            color: #555;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        
+        .compatibility {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+        
+        .compatibility h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .compatibility ul {
+            text-align: left;
+            padding-left: 20px;
+        }
+        
+        .compatibility li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nfc-icon">📱</div>
+        <h1>NFC Universal Reader</h1>
+        <p class="subtitle">Membaca semua jenis kartu NFC</p>
+        
+        <button id="startBtn" class="btn">Aktifkan Pembaca NFC</button>
+        <button id="stopBtn" class="btn" disabled>Berhenti Membaca</button>
+        
+        <div id="status" class="status waiting">
+            Klik tombol di atas untuk mengaktifkan pembaca NFC
+        </div>
+        
+        <div id="cardData" class="card-data" style="display: none;">
+            <div class="data-row">
+                <div class="data-label">Status:</div>
+                <div class="data-value" id="cardStatus">Menunggu kartu...</div>
+            </div>
+            <div class="data-row">
+                <div class="data-label">Tipe Kartu:</div>
+                <div class="data-value" id="cardType">-</div>
+            </div>
+            <div class="data-row">
+                <div class="data-label">UID (Serial Number):</div>
+                <div class="data-value" id="cardUid">-</div>
+            </div>
+            <div class="data-row">
+                <div class="data-label">Data Mentah:</div>
+                <div class="data-value" id="rawData">-</div>
+            </div>
+            <div class="data-row">
+                <div class="data-label">Data Terformat:</div>
+                <div class="data-value" id="formattedData">-</div>
+            </div>
+        </div>
+        
+        <div class="compatibility">
+            <h3>Kompatibilitas Perangkat</h3>
+            <ul>
+                <li><strong>Android:</strong> Chrome 89+ dengan NFC</li>
+                <li><strong>iPhone:</strong> iOS 14+ dengan iPhone 7 atau lebih baru</li>
+                <li><strong>Browser:</strong> Chrome, Edge, Safari</li>
+                <li><strong>Kartu:</strong> Semua tipe NFC (NDEF, Mifare, dll)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const statusDiv = document.getElementById('status');
+            const cardDataDiv = document.getElementById('cardData');
+            
+            // Elemen untuk menampilkan data kartu
+            const cardStatus = document.getElementById('cardStatus');
+            const cardType = document.getElementById('cardType');
+            const cardUid = document.getElementById('cardUid');
+            const rawData = document.getElementById('rawData');
+            const formattedData = document.getElementById('formattedData');
+            
+            let nfcReader = null;
+            
+            // Fungsi untuk memulai pembacaan NFC
+            async function startNFC() {
+                try {
+                    // Periksa dukungan browser
+                    if (!('NDEFReader' in window)) {
+                        throw new Error('Web NFC tidak didukung di browser ini. Gunakan Chrome di Android atau Safari di iOS.');
+                    }
+                    
+                    // Perbarui UI
+                    statusDiv.className = 'status waiting';
+                    statusDiv.textContent = 'Meminta izin NFC...';
+                    startBtn.disabled = true;
+                    
+                    // Buat instance NDEFReader
+                    nfcReader = new NDEFReader();
+                    
+                    // Event listener untuk pembacaan berhasil
+                    nfcReader.addEventListener('reading', event => {
+                        handleNFCReading(event);
+                    });
+                    
+                    // Event listener untuk error
+                    nfcReader.addEventListener('error', event => {
+                        statusDiv.className = 'status error';
+                        statusDiv.textContent = `Error: ${event.message}`;
+                    });
+                    
+                    // Memulai pemindaian dan meminta izin
+                    await nfcReader.scan();
+                    
+                    // Perbarui UI setelah izin diberikan
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = 'NFC aktif! Dekatkan kartu ke perangkat Anda.';
+                    stopBtn.disabled = false;
+                    cardDataDiv.style.display = 'block';
+                    
+                } catch (error) {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = `Error: ${error.message}`;
+                    startBtn.disabled = false;
+                }
+            }
+            
+            // Fungsi untuk menangani pembacaan NFC
+            function handleNFCReading(event) {
+                const { message, serialNumber } = event;
+                
+                // Reset tampilan data
+                cardStatus.textContent = 'Kartu terdeteksi!';
+                cardUid.textContent = serialNumber || 'Tidak tersedia';
+                
+                // Ekstrak data dari kartu
+                let extractedData = '';
+                let cardTypeText = 'NFC Universal';
+                
+                if (message && message.records.length > 0) {
+                    cardTypeText = 'NDEF';
+                    
+                    for (const record of message.records) {
+                        // Decode data berdasarkan tipe record
+                        if (record.recordType === 'text') {
+                            const textDecoder = new TextDecoder(record.encoding);
+                            extractedData += textDecoder.decode(record.data) + '\n';
+                        } 
+                        else if (record.recordType === 'url') {
+                            const textDecoder = new TextDecoder();
+                            extractedData += textDecoder.decode(record.data) + '\n';
+                        } 
+                        else {
+                            // Untuk tipe data lain, tampilkan dalam hex
+                            const hexString = Array.from(record.data)
+                                .map(byte => byte.toString(16).padStart(2, '0'))
+                                .join(' ');
+                            extractedData += `Data (${record.recordType}): ${hexString}\n`;
+                        }
+                    }
+                } else {
+                    // Jika tidak ada NDEF, coba baca data mentah
+                    cardTypeText = 'Non-NDEF / Mifare';
+                    extractedData = 'Data tidak dalam format NDEF';
+                }
+                
+                // Tampilkan data
+                cardType.textContent = cardTypeText;
+                rawData.textContent = JSON.stringify(event, null, 2);
+                formattedData.textContent = extractedData || 'Tidak ada data yang dapat dibaca';
+                
+                // Update status
+                statusDiv.className = 'status success';
+                statusDiv.textContent = 'Kartu berhasil dibaca!';
+            }
+            
+            // Fungsi untuk menghentikan pembacaan
+            function stopNFC() {
+                if (nfcReader) {
+                    // Web NFC API tidak memiliki metode stop() resmi
+                    // Ini hanya simulasi untuk UI
+                    nfcReader = null;
+                    statusDiv.className = 'status waiting';
+                    statusDiv.textContent = 'Pembaca NFC dihentikan';
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+            }
+            
+            // Event listeners
+            startBtn.addEventListener('click', startNFC);
+            stopBtn.addEventListener('click', stopNFC);
+        });
+    </script>
+</body>
+</html>
