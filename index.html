@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFC Universal Reader</title>
+    <title>NFC Universal Reader - iOS & Android</title>
     <style>
         * {
             box-sizing: border-box;
@@ -112,6 +112,12 @@
             border-left: 5px solid #f44336;
         }
         
+        .status.info {
+            background-color: #fff8e1;
+            color: #ff6f00;
+            border-left: 5px solid #ffc107;
+        }
+        
         .card-data {
             background: #f5f5f5;
             border-radius: 10px;
@@ -169,13 +175,51 @@
         .compatibility li {
             margin-bottom: 8px;
         }
+        
+        .ios-guide {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+            border-left: 5px solid #4caf50;
+        }
+        
+        .ios-guide h3 {
+            margin-top: 0;
+            color: #1b5e20;
+        }
+        
+        .ios-guide ol {
+            padding-left: 20px;
+        }
+        
+        .ios-guide li {
+            margin-bottom: 10px;
+        }
+        
+        .real-time-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #4caf50;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="nfc-icon">📱</div>
         <h1>NFC Universal Reader</h1>
-        <p class="subtitle">Membaca semua jenis kartu NFC</p>
+        <p class="subtitle">Membaca semua jenis kartu NFC secara real-time</p>
         
         <button id="startBtn" class="btn">Aktifkan Pembaca NFC</button>
         <button id="stopBtn" class="btn" disabled>Berhenti Membaca</button>
@@ -187,7 +231,9 @@
         <div id="cardData" class="card-data" style="display: none;">
             <div class="data-row">
                 <div class="data-label">Status:</div>
-                <div class="data-value" id="cardStatus">Menunggu kartu...</div>
+                <div class="data-value" id="cardStatus">
+                    <span class="real-time-indicator"></span>Menunggu kartu...
+                </div>
             </div>
             <div class="data-row">
                 <div class="data-label">Tipe Kartu:</div>
@@ -216,6 +262,17 @@
                 <li><strong>Kartu:</strong> Semua tipe NFC (NDEF, Mifare, dll)</li>
             </ul>
         </div>
+        
+        <div id="iosGuide" class="ios-guide" style="display: none;">
+            <h3>Panduan Khusus untuk iPhone</h3>
+            <ol>
+                <li>Pastikan NFC diaktifkan di <strong>Pengaturan > Kontrol Pusat</strong></li>
+                <li>Buka halaman ini di <strong>Safari</strong> (bukan Chrome atau browser lain)</li>
+                <li>Klik tombol "Aktifkan Pembaca NFC" dan berikan izin saat diminta</li>
+                <li>Dekatkan kartu NFC ke bagian atas belakang iPhone</li>
+                <li>Tahan kartu di tempat hingga pembacaan selesai</li>
+            </ol>
+        </div>
     </div>
 
     <script>
@@ -224,6 +281,7 @@
             const stopBtn = document.getElementById('stopBtn');
             const statusDiv = document.getElementById('status');
             const cardDataDiv = document.getElementById('cardData');
+            const iosGuide = document.getElementById('iosGuide');
             
             // Elemen untuk menampilkan data kartu
             const cardStatus = document.getElementById('cardStatus');
@@ -233,6 +291,16 @@
             const formattedData = document.getElementById('formattedData');
             
             let nfcReader = null;
+            let isReading = false;
+            
+            // Deteksi perangkat
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+            
+            // Tampilkan panduan khusus untuk iOS
+            if (isIOS) {
+                iosGuide.style.display = 'block';
+            }
             
             // Fungsi untuk memulai pembacaan NFC
             async function startNFC() {
@@ -263,17 +331,28 @@
                     
                     // Memulai pemindaian dan meminta izin
                     await nfcReader.scan();
+                    isReading = true;
                     
                     // Perbarui UI setelah izin diberikan
                     statusDiv.className = 'status success';
-                    statusDiv.textContent = 'NFC aktif! Dekatkan kartu ke perangkat Anda.';
+                    statusDiv.innerHTML = '<span class="real-time-indicator"></span>NFC aktif! Dekatkan kartu ke perangkat Anda.';
                     stopBtn.disabled = false;
                     cardDataDiv.style.display = 'block';
+                    
+                    // Untuk iOS, tambahkan instruksi khusus
+                    if (isIOS) {
+                        statusDiv.innerHTML += '<br><small>Dekatkan kartu ke bagian atas belakang iPhone</small>';
+                    }
                     
                 } catch (error) {
                     statusDiv.className = 'status error';
                     statusDiv.textContent = `Error: ${error.message}`;
                     startBtn.disabled = false;
+                    
+                    // Jika di iOS dan gagal, berikan petunjuk tambahan
+                    if (isIOS) {
+                        statusDiv.innerHTML += '<br><small>Pastikan Anda menggunakan Safari dan NFC aktif di Kontrol Pusat</small>';
+                    }
                 }
             }
             
@@ -282,7 +361,7 @@
                 const { message, serialNumber } = event;
                 
                 // Reset tampilan data
-                cardStatus.textContent = 'Kartu terdeteksi!';
+                cardStatus.innerHTML = '<span class="real-time-indicator"></span>Kartu terdeteksi!';
                 cardUid.textContent = serialNumber || 'Tidak tersedia';
                 
                 // Ekstrak data dari kartu
@@ -323,25 +402,39 @@
                 
                 // Update status
                 statusDiv.className = 'status success';
-                statusDiv.textContent = 'Kartu berhasil dibaca!';
+                statusDiv.innerHTML = '<span class="real-time-indicator"></span>Kartu berhasil dibaca!';
+                
+                // Untuk iOS, tambahkan instruksi untuk pembacaan berikutnya
+                if (isIOS) {
+                    statusDiv.innerHTML += '<br><small>Dekatkan kartu lain untuk pembacaan berikutnya</small>';
+                }
             }
             
             // Fungsi untuk menghentikan pembacaan
             function stopNFC() {
-                if (nfcReader) {
+                if (nfcReader && isReading) {
                     // Web NFC API tidak memiliki metode stop() resmi
                     // Ini hanya simulasi untuk UI
                     nfcReader = null;
+                    isReading = false;
                     statusDiv.className = 'status waiting';
                     statusDiv.textContent = 'Pembaca NFC dihentikan';
                     startBtn.disabled = false;
                     stopBtn.disabled = true;
+                    cardStatus.innerHTML = 'Menunggu kartu...';
                 }
             }
             
             // Event listeners
             startBtn.addEventListener('click', startNFC);
             stopBtn.addEventListener('click', stopNFC);
+            
+            // Deteksi apakah halaman dibuka di iOS dengan browser selain Safari
+            if (isIOS && !isSafari) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Harap buka halaman ini di Safari untuk menggunakan NFC di iPhone';
+                startBtn.disabled = true;
+            }
         });
     </script>
 </body>
